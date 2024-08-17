@@ -1,3 +1,4 @@
+import { fetchPokemonTCG, logger } from './utils';
 import { type GameState } from './types';
 import { MCTS } from './MCTS';
 
@@ -9,12 +10,18 @@ class PokemonGame {
 		this.runTurnCycle();
 	}
 
+	private coinFlip(): number {
+		return Math.floor(Math.random() * 2);
+	}
+
 	private setupInitialState(): GameState {
-		return {
+		let coinWinner = this.coinFlip();
+		let tempState: GameState = {
 			activePlayer: 0,
 			players: [
 				{
 					username: 'Zezima',
+					coinTossWinner: false,
 					hand: [
 						{ id: 'card_001', name: 'Charmander', type: 'Pokemon' },
 						{ id: 'card_002', name: 'Fire Energy', type: 'Energy' },
@@ -68,6 +75,7 @@ class PokemonGame {
 				},
 				{
 					username: 'WoolooHero',
+					coinTossWinner: false,
 					hand: [
 						{ id: 'card_005', name: 'Squirtle', type: 'Pokemon' },
 						{
@@ -123,12 +131,41 @@ class PokemonGame {
 				},
 			],
 			lastAction: { cardId: '000', type: 'setup' },
-			turn: 0, // configure bench
+			turn: 0, // configure bench turing turn 0
 		};
+
+		logger.info(
+			`Player ${tempState.players[coinWinner].username} has won the coin toss.`
+		);
+
+		function findCoinTossWinner(state: GameState): number {
+			for (let i = 0; i < state.players.length; i++) {
+				if (state.players[i].coinTossWinner) {
+					return i; // Return the index of the player with coinTossWinner set to true
+				}
+			}
+			throw new Error(
+				'No player has won the coin toss? Something may be wrong.'
+			);
+		}
+
+		tempState.players[coinWinner].coinTossWinner = true;
+		tempState.activePlayer = findCoinTossWinner(tempState);
+		return tempState;
+	}
+
+	private initializeGameStart() {
+		// 1. Shuffle deck, draw 7 cards
+		// 2. Set Up Bench (if applicable) (up to 1 active pokemon and 5 bench)
+		// --> if no bench pokemon, mulligan (create mulligan counter)
 	}
 
 	private runTurnCycle() {
+		this.initializeGameStart();
 		while (!this.isGameOver()) {
+			this.currentState.turn === 0
+				? logger.info(`Game Setup!`)
+				: logger.info(`Turn: ${this.currentState.turn} 🎴`);
 			this.runTurn();
 			this.endTurn();
 			this.switchPlayer();
@@ -138,23 +175,20 @@ class PokemonGame {
 	private runTurn() {
 		const mcts = new MCTS(this.currentState);
 		const bestAction = mcts.runSearch(1000); // Run 1000 iterations
-		console.log(
-			`Best action chosen by Player ${
-				this.currentState.activePlayer + 1
-			}:`,
-			bestAction
+		logger.info(
+			bestAction,
+			`Best action chosen by Player ${this.currentState.activePlayer + 1}`
 		);
-
 		// Apply the best action to the game state
 		this.currentState = mcts.executeAction(this.currentState, bestAction);
-		console.log(
+		logger.info(
 			'New game state after applying the best action:',
 			this.currentState
 		);
 	}
 
 	private endTurn() {
-		console.log(
+		logger.info(
 			`Player ${this.currentState.activePlayer + 1}'s turn has ended.`
 		);
 		// Implement any end-of-turn logic here (e.g., status effects, drawing cards, etc.)
@@ -163,8 +197,7 @@ class PokemonGame {
 	private switchPlayer() {
 		this.currentState.turn++;
 		this.currentState.activePlayer = 1 - this.currentState.activePlayer;
-		console.log(`--- [ Turn: ${this.currentState.turn} ] ---`);
-		console.log(
+		logger.info(
 			`It's now Player ${this.currentState.activePlayer + 1}'s turn.`
 		);
 	}
@@ -177,4 +210,12 @@ class PokemonGame {
 	}
 }
 
-new PokemonGame();
+// fetchPokemonTCG('https://api.pokemontcg.io/v2/sets')
+// 	.then((data) => {
+// 		logger.info(data);
+// 	})
+// 	.catch((error) => {
+// 		throw new Error('Could not fetch sets from API endpoint!');
+// 	});
+
+// new PokemonGame();

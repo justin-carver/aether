@@ -3,9 +3,20 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "pino-pretty": "^11.2.2"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "version": "1.0.0",
+  "main": "server.ts",
+  "repository": "https://github.com/justin-carver/aether.git",
+  "author": "Justin Carver <justin.carver@hotmail.com>",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pino": "^9.3.2"
   }
 }

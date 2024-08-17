@@ -1,6 +1,7 @@
 export interface Player {
 	username: string;
 	hand: Card[];
+	coinTossWinner: boolean; // heads or tails
 	activePokemon: PokemonCard;
 	benchedPokemon: PokemonCard[];
 	discardPile: Card[];

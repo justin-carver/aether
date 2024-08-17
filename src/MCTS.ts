@@ -1,3 +1,5 @@
+import { logger } from './utils';
+
 import {
 	type MCTSNode,
 	type GameState,
@@ -18,6 +20,7 @@ export class MCTS {
 
 	private createNode(state: GameState, parent: MCTSNode | null): MCTSNode {
 		const actions = this.getPossibleActions(state);
+		// TODO: Create node object?
 		return {
 			state: state,
 			parent: parent || undefined,
@@ -197,6 +200,11 @@ export class MCTS {
 			(card) => card.id === cardId
 		) as EnergyCard;
 
+		// Check if an energy has already been attached this turn
+		if (player.energyAttachedThisTurn) {
+			return 0; // If an energy card has already been attached this turn, return 0
+		}
+
 		if (!energyCard) return 0;
 
 		// Simple heuristic: Prioritize attaching energy that allows powerful moves
@@ -283,7 +291,7 @@ export class MCTS {
 	private expandNode(node: MCTSNode): MCTSNode {
 		const action = node.untriedActions.pop(); // Pop should remove the action
 		if (!action) {
-			console.log('No more untried actions available for expansion.');
+			logger.info('No more untried actions available for expansion.');
 			return node;
 		}
 
@@ -323,17 +331,22 @@ export class MCTS {
 
 		// If no children, this means no valid actions were found
 		if (this.root.children.length === 0) {
-			throw new Error('No valid actions found.');
+			logger.error('No valid actions found.');
+			this.quitGame();
 		}
 
-		// Choose the action that led to the most visited child
-		const bestChild = this.root.children.reduce((best, child) => {
-			return child.visits > best.visits ? child : best;
-		});
+		let bestChild: MCTSNode = <MCTSNode>{};
+		if (this.root.children) {
+			// Choose the action that led to the most visited child
+			bestChild = this.root.children.reduce((best, child) => {
+				return child.visits > best.visits ? child : best;
+			});
+		}
 
 		// Return the action that led to the best child node
 		if (!bestChild || !bestChild.action) {
-			throw new Error('Best action could not be determined.');
+			logger.error('Best action could not be determined. 😔');
+			// throw new Error('Best action could not be determined.');
 		}
 
 		return bestChild.action!;
@@ -345,20 +358,22 @@ export class MCTS {
 
 		switch (action.type) {
 			case 'AttachEnergy': {
-				// Attach an energy card to the active Pokémon
-				const energyCardIndex = player.hand.findIndex(
-					(card) => card.id === action.cardId
-				);
-				if (energyCardIndex >= 0) {
-					const energyCard = player.hand.splice(
-						energyCardIndex,
-						1
-					)[0] as EnergyCard;
-					player.activePokemon.attachedEnergy.push(energyCard);
-					player.energyAttachedThisTurn = true;
-					console.log(
-						`Attached ${energyCard.name} to ${player.activePokemon.name}`
+				if (!player.energyAttachedThisTurn) {
+					// Attach an energy card to the active Pokémon
+					const energyCardIndex = player.hand.findIndex(
+						(card) => card.id === action.cardId
 					);
+					if (energyCardIndex >= 0) {
+						const energyCard = player.hand.splice(
+							energyCardIndex,
+							1
+						)[0] as EnergyCard;
+						player.activePokemon.attachedEnergy.push(energyCard);
+						player.energyAttachedThisTurn = true;
+						logger.info(
+							`Attached ${energyCard.name} to ${player.activePokemon.name}`
+						);
+					}
 				}
 				break;
 			}
@@ -372,13 +387,13 @@ export class MCTS {
 					const opponent =
 						newState.players[1 - newState.activePlayer];
 					opponent.activePokemon.currentHp -= move.damage;
-					console.log(
+					logger.info(
 						`${player.activePokemon.name} used ${move.name} and dealt ${move.damage} damage to ${opponent.activePokemon.name}`
 					);
 
 					if (opponent.activePokemon.currentHp <= 0) {
 						opponent.activePokemon.currentHp = 0;
-						console.log(
+						logger.info(
 							`${opponent.activePokemon.name} is knocked out!`
 						);
 					}
@@ -394,7 +409,7 @@ export class MCTS {
 				if (cardIndex >= 0) {
 					const trainerCard = player.hand.splice(cardIndex, 1)[0];
 					player.discardPile.push(trainerCard);
-					console.log(
+					logger.info(
 						`${player.username} played ${trainerCard.name}`
 					);
 
@@ -416,7 +431,7 @@ export class MCTS {
 					)[0];
 					player.benchedPokemon.push(player.activePokemon);
 					player.activePokemon = benchedPokemon;
-					console.log(
+					logger.info(
 						`${player.username} retreated ${benchedPokemon.name}`
 					);
 				}
@@ -426,7 +441,7 @@ export class MCTS {
 			// TODO: Handle additional action types as needed
 
 			default:
-				console.log(`Unknown action type: ${action.type}`);
+				logger.info(`Unknown action type: ${action.type}`);
 		}
 
 		// Update the last action performed
@@ -448,7 +463,7 @@ export class MCTS {
 				) {
 					player.activePokemon.currentHp = player.activePokemon.maxHp;
 				}
-				console.log(`${player.activePokemon.name} healed 20 HP!`);
+				logger.info(`${player.activePokemon.name} healed 20 HP!`);
 				break;
 			}
 
@@ -459,23 +474,13 @@ export class MCTS {
 				) {
 					player.activePokemon.currentHp = player.activePokemon.maxHp;
 				}
-				if (player.activePokemon.attachedEnergy.length > 0) {
-					const discardedEnergy =
-						player.activePokemon.attachedEnergy.pop();
-					player.discardPile.push(discardedEnergy!);
-					console.log(
-						`${
-							player.activePokemon.name
-						} healed 50 HP and discarded ${discardedEnergy!.name}`
-					);
-				}
 				break;
 			}
 
 			// Add more cases for different Trainer cards with their specific effects
 
 			default:
-				console.log(
+				logger.info(
 					`No specific effect for Trainer card: ${trainerCard.name}`
 				);
 		}
@@ -538,5 +543,11 @@ export class MCTS {
 	// Public wrapper method
 	public executeAction(state: GameState, action: Action): GameState {
 		return this.applyAction(state, action);
+	}
+
+	public quitGame(): void {
+		// Exits the current running session
+		logger.info(this.root, 'Exiting Game! Final Results:');
+		this.root = null as any;
 	}
 }
