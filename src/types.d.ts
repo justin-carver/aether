@@ -49,7 +49,7 @@ export interface GameState {
 	// Add other necessary fields like turn number, active Pokémon, benched Pokémon, etc.
 }
 
-interface MCTSNode {
+export interface MCTSNode {
 	state: GameState;
 	parent?: MCTSNode;
 	children: MCTSNode[];

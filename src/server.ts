@@ -210,12 +210,4 @@ class PokemonGame {
 	}
 }
 
-// fetchPokemonTCG('https://api.pokemontcg.io/v2/sets')
-// 	.then((data) => {
-// 		logger.info(data);
-// 	})
-// 	.catch((error) => {
-// 		throw new Error('Could not fetch sets from API endpoint!');
-// 	});
-
 // new PokemonGame();

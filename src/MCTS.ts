@@ -545,6 +545,7 @@ export class MCTS {
 		return this.applyAction(state, action);
 	}
 
+	// Should this be in server.ts?
 	public quitGame(): void {
 		// Exits the current running session
 		logger.info(this.root, 'Exiting Game! Final Results:');

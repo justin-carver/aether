@@ -1,9 +1,71 @@
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import {
+	initializeCardDatabase,
+	insertCardData,
+	queryCardByName,
+	readJsonData,
+} from './database';
+
+// import Chain, { chain } from 'stream-chain';
+
+// import { argv } from 'bun';
+// import { ignore } from 'stream-json/filters/Ignore';
+// import { parser } from 'stream-json';
+// import { pick } from 'stream-json/filters/Pick';
+// import { streamArray } from 'stream-json/streamers/StreamArray';
+
+// import { streamValues } from 'stream-json/streamers/StreamValues';
+
 dotenv.config();
 
 export const logger = require('pino')(require('pino-pretty')());
+
+const jsonData = readJsonData(); // Read the JSON data
+initializeCardDatabase(); // Initialize the database
+
+jsonData.data.forEach((card: any) => {
+	insertCardData(card); // Insert each card into the database
+});
+
+console.log('Data successfully imported into the database!');
+
+queryCardByName('Rayquaza');
+
+// For parsing large JSON files.
+// ? This may not be needed, since the database will do most of the parsing.
+// function createJSONPipeline(jsonFilepath: string): Chain {
+// 	return chain([
+// 		fs.createReadStream(jsonFilepath),
+// 		parser(),
+// 		pick({ filter: 'data' }), // Dependent on data set
+// 		streamArray(), // This will process each object in the array individually
+// 	]);
+// }
+
+// let pokemonFound = 0;
+// let allCardData = createJSONPipeline(
+// 	path.resolve(__dirname, 'data/pokemon_tcg_all_cards.json')
+// )
+// 	.on('data', (data: any) => {
+// 		const object = data.value;
+// 		const targetField = 'name'; // Replace 'desiredField' with the actual field name you're looking for
+// 		const pokemonName = 'Rayquaza';
+// 		if (object.hasOwnProperty(targetField) && object.name == pokemonName) {
+// 			pokemonFound++;
+// 			console.log(object);
+// 		}
+// 	})
+// 	.on('end', (end: any) => {
+// 		console.log(`Finished processing the ${argv[0]} object.`);
+// 		console.log(`${pokemonFound} cards found.`);
+// 	});
+
+// allCardData.on('error', (err) => {
+// 	console.error('An error occurred:', err);
+// });
 
 // https://docs.pokemontcg.io/
 export async function fetchPokemonTCG<T>(url: string): Promise<T> {
@@ -151,6 +213,7 @@ export function checkAPIEndpoints() {
 			);
 		}
 	});
+	logger.info(); // line break
 }
 
 checkAPIEndpoints();
